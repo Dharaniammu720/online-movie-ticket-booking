@@ -1,0 +1,261 @@
+from tkinter import *
+import tkinter as tk
+from tkinter import messagebox
+from tkinter import Toplevel
+from PIL import Image, ImageTk
+import datetime
+import os
+
+# Ticket prices and available seats
+TICKET_PRICES = {"Regular": 150, "VIP": 300}
+SEATS = [[f"{row}{col}" for col in range(1, 6)] for row in "ABCDE"]
+Selected_Seats = []
+
+CITY_THEATERS = {
+    "Trichy": ["Maris", "Mega Star", "Sona Mena", "BHEL"],
+    "Chennai": ["Udhaym", "Cinis Theater", "Venkateshwara", "Cauvery"],
+    "Madurai": ["Sarajo", "Ramba", "Shanthi", "Star Theatre"],
+    "Salem": ["LMR Theater", "KS Theater", "MGM Theater", "Jothi Theater"]
+}
+
+MOVIE_TIMES = {
+    "Dargon": ["10.00", "1.10", "4.20", "7.30"],
+    "Neek": ["10.15", "1.25", "4.35", "7.45"],
+    "Vidamuyarchi": ["10.30", "1.40", "4.50", "8.00"],
+    "Goat": ["10.45", "1.55", "5.05", "8.15"]
+}
+
+
+def update_theaters(*args):
+    """Update the theater dropdown based on the selected city."""
+    City = City_var.get()
+    Theater_Menu["menu"].delete(0, "end")
+    if City in CITY_THEATERS:
+        for Theater in CITY_THEATERS[City]:
+            Theater_Menu["menu"].add_command(label=Theater, command=tk._setit(Theater_var, Theater))
+        Theater_var.set(CITY_THEATERS[City][0])
+
+
+def update_showtimes(*args):
+    """Update the showtime dropdown based on the selected movie."""
+    Movie = Movie_var.get()
+    Time_Menu["menu"].delete(0, "end")
+    if Movie in MOVIE_TIMES:
+        for Time in MOVIE_TIMES[Movie]:
+            Time_Menu["menu"].add_command(label=Time, command=tk._setit(Time_var, Time))
+        Time_var.set(MOVIE_TIMES[Movie][0])
+
+
+def toggle_seat(seat, button):
+    if seat in Selected_Seats:
+        Selected_Seats.remove(seat)
+        button.config(bg="red")
+    else:
+        Selected_Seats.append(seat)
+        button.config(bg="green")
+
+
+def calculate_total():
+    Seat_type = Seat_type_var.get()
+    if not Selected_Seats:
+        messagebox.showerror("Error", "No seats selected!")
+        return
+    if Seat_type not in TICKET_PRICES:
+        messagebox.showerror("Error", f"Invalid seat type selected:{Seat_type}")
+        return
+    Seat_count = len(Selected_Seats)
+    total_price = Seat_count * TICKET_PRICES[Seat_type]
+    Total_label.config(text=f"Total Price: Rs.{total_price}")
+
+def book_ticket():
+    """Display booking confirmation message"""
+    Movie = Movie_var.get()
+    City = City_var.get()
+    Theater = Theater_var.get()
+    Payment = Payment_var.get()
+    Time = Time_var.get()
+    Date = Date_var.get()
+    Seat_type = Seat_type_var.get()
+
+    if not Selected_Seats:
+        messagebox.showerror("Error", "No seats selected!")
+        return
+
+    total_price = len(Selected_Seats) * TICKET_PRICES[Seat_type]
+    Seats_str = ",".join(Selected_Seats)
+
+# Create a new window for booking confirmation
+    confirmation_window = Toplevel(root)
+    confirmation_window.title("Booking Confirmation")
+    confirmation_window.geometry("1400x800")
+
+    booking_confirmation = (
+        f"Booking Confirmation\n"
+        f"----------------------\n"
+        f"Movie: {Movie}\n"
+        f"Theater: {Theater}\n"
+        f"City: {City}\n"
+        f"Date: {Date}\n"
+        f"Time: {Time}\n"
+        f"Seats: {Seats_str}\n"
+        f"Seat Type: {Seat_type}\n"
+        f"Payment: {Payment}\n"
+        f"Total Price: Rs.{total_price}\n"
+    )
+
+# Load background image for confirmation page
+    try:
+        image = Image.open("C://Users//Dell//OneDrive//Pictures//Saved Pictures//6.jpg")  
+        resized_image = image.resize((1400, 800))  
+        background_image = ImageTk.PhotoImage(resized_image)
+        canvas = tk.Canvas(confirmation_window, width=1400, height=800)
+        canvas.place(x=0, y=0)  
+        canvas.create_image(0, 0, image=background_image, anchor="nw")
+        confirmation_window.bg_image = background_image 
+    except Exception as e:
+        messagebox.showerror("Error", f"Could not load image for confirmation: {e}")
+
+# Display the booking confirmation text
+    confirmation_label = tk.Label(confirmation_window, text=booking_confirmation, font=("Felix Titling", 20,"bold"),fg="#F5F5F5", bg="#4CAF50")
+    confirmation_label.place(x=1, y=35)
+
+# Save to file
+    with open("Receipt_Text.txt", "w", encoding="utf-8") as file:
+        file.write(booking_confirmation)
+# Allow the user to close the window
+        messagebox.showinfo("Success", "Ticket booked successfully!")
+
+def Print_Receipt():
+    """Open a new window to display the saved receipt."""
+    try:
+        receipt_window = Toplevel(root)
+        receipt_window.title("Receipt:")
+        receipt_window.geometry("1400x800")
+        try:
+            image = Image.open("C://Users//Dell//OneDrive//Pictures//Saved Pictures//9.jpg")  
+            resized_image = image.resize((1400, 800)) 
+            background_image = ImageTk.PhotoImage(resized_image)
+            canvas = tk.Canvas(receipt_window, width=1400, height=800)
+            canvas.place(x=0, y=0)  
+            canvas.create_image(0, 0, image=background_image, anchor="nw")
+            receipt_window.bg_image = background_image  
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not load image for receipt: {e}")
+
+# Load the receipt from the saved file
+        with open("Receipt_Text.txt", "r", encoding="utf-8") as file:
+            receipt_content = file.read()
+
+        receipt_label = tk.Label(receipt_window, text="Receipt:", font=("Dubai Medium", 20, "bold"),fg="blue",bg="pink")
+        receipt_label.place(x=1, y=30)
+        receipt_text = tk.Text(receipt_window, height=15, width=20, font=("Elephant", 16),fg="#F8BBD0",bg="#00796B", wrap=tk.WORD)
+        receipt_text.insert(tk.END, receipt_content)
+        receipt_text.config(state=tk.DISABLED)
+        receipt_text.place(x=0, y=70)
+
+# Printing feature (Windows only)
+        print_button = tk.Button(receipt_window, text="Print Receipt", command=lambda: print_receipt("Receipt_Text.txt"))
+        print_button.place(x=0, y=375)
+        messagebox.showinfo("Success", "Print Receipt successfully!")
+       
+    except Exception as e:
+        messagebox.showerror("Error", f"Could not open or read receipt: {e}")
+
+
+def print_receipt(file_name):
+    """Print the saved receipt file (Windows only)."""
+    try:
+        os.startfile(file_name, "print")
+        messagebox.showinfo("Printing", "Receipt is being printed...")
+    except Exception as e:
+        messagebox.showerror("Error", f"Printing failed: {e}")
+
+
+# Main tkinter window
+root = tk.Tk()
+root.title("Movie Ticket Booking")
+image = Image.open("C://Users//Dell//OneDrive//Pictures//Saved Pictures//4.jpg")
+window_width = 1400
+window_height = 800
+resized_image = image.resize((window_width, window_height))
+background_image = ImageTk.PhotoImage(resized_image)
+canvas = tk.Canvas(root, width=window_width, height=window_height)
+canvas.pack()
+canvas.create_image(0, 0, image=background_image, anchor="nw")
+Welcome = tk.Label(root, text="Movie Ticket Booking:", font=('forte', 20, 'bold'), fg="magenta",bg="#1A237E")
+Welcome.place(x=60, y=1)
+
+# Movie selection
+tk.Label(root, text="Select Movie:", font=('Lucide Calligraphy', 18, 'bold','italic'), fg="#D81B60").place(x=0, y=41)
+Movie_var = tk.StringVar()
+Movie_var.trace("w", update_showtimes)
+Movies = list(MOVIE_TIMES.keys())
+tk.OptionMenu(root, Movie_var, *Movies).place(x=229, y=41)
+
+# City Selection
+tk.Label(root, text="Select City:", font=('Lucide Calligraphy', 18, 'bold','italic'), fg="#D81B60").place(x=0, y=79)
+City_var = tk.StringVar()
+City_var.trace("w", update_theaters)
+Cities = list(CITY_THEATERS.keys())
+tk.OptionMenu(root, City_var, *Cities).place(x=229, y=79)
+
+# Theater Selection
+tk.Label(root, text="Select theater:", font=('Lucide Calligraphy', 18, 'bold','italic'), fg="#D81B60").place(x=0, y=118)
+Theater_var = tk.StringVar()
+Theater_Menu = tk.OptionMenu(root, Theater_var, "")
+Theater_Menu.place(x=229, y=118)
+
+# Time Selection
+tk.Label(root, text="Select ShowTime:", font=('Lucide Calligraphy', 18, 'bold','italic'), fg="#D81B60").place(x=0, y=157)
+Time_var = tk.StringVar()
+Time_Menu = tk.OptionMenu(root, Time_var, "")
+Time_Menu.place(x=229, y=157)
+
+# Date Selection
+tk.Label(root, text="Select Date:", font=('Lucide Calligraphy', 18, 'bold','italic'), fg="#D81B60").place(x=0, y=195)
+Date_var = tk.StringVar()
+Dates = [(datetime.date.today() + datetime.timedelta(days=i)).strftime("%y-%m-%d") for i in range(4)]
+tk.OptionMenu(root, Date_var, *Dates).place(x=229, y=195)
+
+# Payment selection
+tk.Label(root, text="Payment Selection:", font=('Lucide Calligraphy', 18, 'bold','italic'), fg="#D81B60").place(x=0, y=232)
+Payment_var = tk.StringVar()
+Payments = ["UPI", "Credit card", "Paytm", "Debit Card"]
+tk.OptionMenu(root, Payment_var, *Payments).place(x=229, y=232)
+
+# Seat Type Selection
+tk.Label(root, text="Select Seat Type:", font=('Lucide Calligraphy', 18, 'bold','italic'), fg="#D81B60").place(x=0, y=270)
+Seat_type_var = tk.StringVar()
+Seat_types = ["Regular", "VIP"]
+tk.OptionMenu(root, Seat_type_var, *Seat_types).place(x=229, y=270)
+
+# Seat Selection Grid
+tk.Label(root, text="Selected Seats:", font=('Lucide Calligraphy', 18, 'bold','italic'), fg="#D81B60").place(x=0, y=309)
+Seat_frame = tk.Frame(root)
+Seat_frame.place(x=229, y=309)
+Seat_buttons = {}
+for r, row in enumerate(SEATS):
+    for c, seat in enumerate(row):
+        btn = tk.Button(Seat_frame, text=seat, width=4, bg="Red")
+        btn.grid(row=r, column=c)
+        btn.config(command=lambda s=seat, b=btn: toggle_seat(s, b))
+        Seat_buttons[seat] = btn
+
+# Total Price Label
+Total_label = tk.Label(root, text="Total Price:Rs.0", font=('Lucida Fax', 18, 'italic'), fg="dark green", bg="light yellow")
+Total_label.place(x=230, y=448)
+
+# Button
+tk.Button(root, text="Calculate Total:", command=calculate_total, bg="green", fg="white", font=("jokerman", 13)).place(x=230, y=481)
+tk.Button(root, text="Book Ticket:", command=book_ticket, bg="blue", fg="white", font=("jokerman", 13)).place(x=230, y=526)
+tk.Button(root, text="Print Receipt:", command=Print_Receipt, bg="purple", fg="white", font=("jokerman", 13)).place(x=230, y=571)
+
+# Booking Confirmation Label
+confirmation_label = tk.Label(root, text="", font=("Arial", 12), justify="left", fg="blue", bg="light yellow")
+confirmation_label.place(x=230, y=597)
+
+# Receipt Display Label
+receipt_label = tk.Label(root, text="", font=("Arial", 12), justify="left", fg="blue", bg="light yellow")
+receipt_label.place(x=230, y=617)
+
+root.mainloop()
